@@ -1,0 +1,77 @@
+#!/usr/bin/python
+import urllib2
+import re
+
+#Connect to the kalitools Webpage, troll it, and output a csv file with all tools and descriptions.
+
+
+url = "http://tools.kali.org/tools-listing"
+
+
+tools = {}
+
+
+#connect to a URL
+website = urllib2.urlopen(url)
+
+#read html code
+html = website.read()
+
+#use re.findall to get all the links
+links = re.findall('"((http|ftp)s?://.*?)"', html)
+
+for ix,link in enumerate(links):
+	try:
+		if "wp-" in link[0]:
+			continue
+		
+		if "tools.kali.org" in link[0]:
+			print "%s of %s - Checking Link: %s" % (ix+1, len(links), link[0])
+			#connect to a URL
+			website = urllib2.urlopen(link[0])
+
+			#read html code
+			html = website.read()
+
+			#use re.findall to get all the links
+			appslist = []
+			appname = ""
+			appdescription = ""
+			appcategory = ""
+			for line in html.split("\n"):
+				try:
+								if "og:title" in line:
+									appname = line
+									appname = appname.split()[2] 
+									appname = re.findall('"([^"]*)"', appname)[0]
+									foundname = True		
+								if "og:type" in line:
+									appcategory = line
+									appcategory = appcategory.split()[2]
+									appcategory = re.findall('"([^"]*)"', appcategory)[0]
+								if "og:description" in line:
+									appdescription = line
+									appdescription = appdescription.split('content=')[1] 
+									appdescription = re.findall('"([^"]*)"', appdescription)[0]
+									appdescription = appdescription.replace('&lt;p style=&quot;text-align: justify;&quot;&gt;','')
+									appdescription = appdescription.replace('&lt;/p&gt;','')
+				except Exception, e:
+							print e.message
+			if appdescription.strip() != '':
+				if not appname in tools:
+					tools[appname] = {}
+					tools[appname]['cat'] = appcategory
+					tools[appname]['desc'] = appdescription
+					print '"%s","%s","%s"' % (appname, tools[appname]['cat'], tools[appname]['desc'] )
+
+
+	except:
+		pass
+
+
+
+f = open("kalitoolslist.csv", 'w')
+for appname in tools:
+	print '"%s","%s","%s"' % (appname, tools[appname]['cat'], tools[appname]['desc'] )
+	f.write('"%s","%s","%s"\n' % (appname, tools[appname]['cat'], tools[appname]['desc']))
+f.close()
